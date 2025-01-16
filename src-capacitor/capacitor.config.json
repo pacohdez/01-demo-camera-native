@@ -1,0 +1,11 @@
+{
+  "appId": "com.cameranative.app",
+  "appName": "App DemoNative",
+  "webDir": "www",
+  "plugins": {
+    "Camera": {
+      "saveToGallery": true,
+      "allowEditing": false
+    }
+  }
+}
