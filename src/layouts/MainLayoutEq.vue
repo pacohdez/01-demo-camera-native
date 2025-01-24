@@ -1,11 +1,13 @@
 <script setup>
-import { ref } from 'vue'
+import { ref, onMounted, onUnmounted } from 'vue'
 import { storeToRefs } from 'pinia';
 import { Camera, CameraResultType, CameraSource } from '@capacitor/camera'
 import { Capacitor } from '@capacitor/core'
 import { useGeneralStore } from '../boot/EvidenciasEquipos/general.js'
 import { useEvidenciaFotograficaEquipoStore } from '../stores/EvidenciasEquipos/evidenciaFotograficaEquipo.js'
 import { useComponentesEquipoStore } from '../stores/EvidenciasEquipos/componentesEquipo.js'
+import { useSecurityStore } from 'src/stores/EvidenciasEquipos/security.js'
+import { useRouter } from 'vue-router'
 import CapturaEvidenciasEquipo from 'src/components/CapturaEvidenciasEquipo.vue'
 import ConsultaEvidenciasEquipo from 'src/components/ConsultaEvidenciasEquipo.vue'
 import Swal from 'sweetalert2'
@@ -19,8 +21,31 @@ const { cleanImagesSource } = useEvidenciaFotograficaEquipo
 const { imagesSource } = storeToRefs(useEvidenciaFotograficaEquipo)
 
 const useComponentesEquipo = useComponentesEquipoStore()
-const { cleanComponenteSeleccionado } = useComponentesEquipo
+const { cleanComponenteSeleccionado, addListadoComponente } = useComponentesEquipo
 const { componenteSeleccionado } = storeToRefs(useComponentesEquipo)
+
+const useSecurity = useSecurityStore();
+const { clearToken, isTokenExpired } = useSecurity
+const router = useRouter()
+
+const checkSession = async () => {
+  console.log('Verificando sesión...');
+  console.log('Token expirado:', await isTokenExpired());
+  
+  if (await isTokenExpired()) {
+    console.log('Token expirado. Redirigiendo al login...');
+    clearToken(); // Limpia cualquier dato almacenado del usuario
+    router.push('/login'); // Redirige al login
+  }
+}
+
+onMounted(() => {
+  // Verifica la sesión cada 60 segundos
+  const interval = setInterval(checkSession, 60000);
+
+  // Limpia el intervalo cuando se desmonta el componente
+  onUnmounted(() => clearInterval(interval));
+})
 
 async function takePicture() {
   // Verificar plataforma
@@ -55,8 +80,15 @@ const guardar = async () => {
     confirmButtonText: "Aceptar"
   }).then(async result => {
     if (result.value) {
-      
       Swal.fire("Información guardada exitosamente!", "", "success").then(() => {
+        let obj_listado = {
+          id: orden.value.id,
+          numero_orden: orden.value.numero_orden,
+          componente: componenteSeleccionado.value,
+          imagenes: imagesSource.value
+        }
+        console.log(JSON.stringify(obj_listado))
+        addListadoComponente(obj_listado)
         cleanOrden()
         cleanComponenteSeleccionado()
         cleanImagesSource()
@@ -77,6 +109,15 @@ const guardar = async () => {
           <q-tab name="Captura" icon="add_circle" @click="cleanOrden(); " />
           <q-tab name="Consulta" icon="search" @click="cleanOrden(); " />
         </q-tabs>
+        <q-btn
+          flat
+          round
+          color="white"
+          icon="logout"
+          @click="clearToken(); router.push('/login')"
+          class="absolute"
+          style="right: 0; top: 0; transform: translateY(50%);"
+        />
       </q-toolbar>
     </q-header>
 

@@ -9,6 +9,7 @@ import GlobalEq from 'src/configuration/globalEq.js'
 // "export default () => {}" function below (which runs individually
 // for each client)
 const api = axios.create({ baseURL: GlobalEq.baseUrlAxios() })
+const apiKeycloak = axios.create({ baseURL: GlobalEq.baseUrlKeycloak() })
 
 export default defineBoot(({ app }) => {
   // for use inside Vue files (Options API) through this.$axios and this.$api
@@ -17,9 +18,10 @@ export default defineBoot(({ app }) => {
   // ^ ^ ^ this will allow you to use this.$axios (for Vue Options API form)
   //       so you won't necessarily have to import axios in each vue file
 
+  app.config.globalProperties.$apiKeycloak = apiKeycloak
   app.config.globalProperties.$api = api
   // ^ ^ ^ this will allow you to use this.$api (for Vue Options API form)
   //       so you can easily perform requests against your app's API
 })
 
-export { api }
+export { api, apiKeycloak }

@@ -33,7 +33,7 @@ onMounted(() => {
     >
         <q-card>
             <q-card-section class="text-white" style="background-color: #3B3F51;">
-                <div class="text-h6">Evidencias del equipo: {{ _componenteSeleccionado.nombre }}</div>
+                <div class="text-h6">Evidencias del equipo: {{ _componenteSeleccionado.componente }}</div>
             </q-card-section>
 
             <q-card-section class="q-pa-none">

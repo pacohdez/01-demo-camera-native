@@ -30,9 +30,9 @@ const closeDialogImagenesEquipo = () => {
     </div>
     <div class="q-mt-sm" v-if="orden.numero_orden != ''">
         <q-list bordered>
-            <div v-for="componente in listComponentes" :key="componente.id">
+            <div v-for="componente in listComponentes.filter((componente) => (componente.id === orden.id))" :key="componente.id">
                 <q-item clickable v-ripple @click="showEvidenciasEquipo(componente)">
-                    <q-item-section>{{ componente.nombre }}</q-item-section>
+                    <q-item-section>{{ componente.componente }}</q-item-section>
                     <q-item-section avatar>
                     <q-icon color="primary" name="photo_camera" />
                     </q-item-section>
