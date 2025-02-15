@@ -1,19 +1,39 @@
 import { defineStore } from 'pinia'
 import { ref } from 'vue'
+import { storeToRefs } from 'pinia';
 import { apiKeycloak } from 'src/boot/axios';
+import { useGeneralStore } from 'src/boot/EvidenciasEquipos/general.js'
+import { useGetPayloadToken } from 'src/composables/getPayloadToken.js'
 import localforage from 'localforage'
 
 export const useSecurityStore = defineStore('security', () => {
 
+    const useGeneral = useGeneralStore()
+    const { getFechaServidor, getUsuarioPorNumero } = useGeneral
+    const { fecha_servidor, obj_personal } = storeToRefs(useGeneral)
+
+    const usePayloadToken = useGetPayloadToken()
+    const { payloadToken } = usePayloadToken
+
     // Estado reactivo para el access_token
     const accessToken = ref(null);
+    const obj_session_user = ref({
+        "id": '',
+        "name": '',
+        "employee_number": '',
+    });
 
     // Función para guardar el token en el almacenamiento seguro
-    const saveToken = async(token) => {
+    const saveToken = async(token, refresh_token) => {
         accessToken.value = token; // Actualiza el estado
-        await localforage.setItem(
-            'access_token', token
-        );
+        await localforage.setItem('access_token', token);
+        await localforage.setItem('refresh_token', refresh_token);
+
+        let payload = payloadToken(token)
+        obj_session_user.value.name = payload.name
+        obj_session_user.value.employee_number = payload.preferred_username
+        await getUsuarioPorNumero(obj_session_user.value.employee_number)
+        obj_session_user.value.id = obj_personal.value.id
     }
 
     // Función para obtener el token desde el almacenamiento seguro
@@ -28,22 +48,29 @@ export const useSecurityStore = defineStore('security', () => {
     const clearToken = async() => {
         accessToken.value = null; // Limpia el estado
         await localforage.removeItem('access_token');
-    }
+        await localforage.removeItem('refresh_token');
 
-    // Getter para verificar si el usuario está autenticado
-    const isAuthenticated = () => !!accessToken.value;
+        Object.assign(obj_session_user.value, {"id": '', "name": '', "employee_number": ''})
+    }
 
     const isTokenExpired = async () => {
         const token = await getToken(); // Recupera el token actual
+        let payload = null;
+
+        if (!token) {
+            console.log('No token found, considered expired.');
+            return true; // Si no hay token, se considera expirado
+        }
         
-        if (!token) return true; // Si no hay token, se considera expirado
-    
-        const [, payloadBase64] = token.split('.'); // Decodifica el JWT
-        const payload = JSON.parse(atob(payloadBase64)); // Decodifica el payload del token
-        const currentTime = Math.floor(Date.now() / 1000); // Tiempo actual en segundos
-        
-        //return payload.exp <= currentTime; // Retorna true si el token ha expirado
-        return true
+        try {
+            payload = payloadToken(token)
+            getFechaServidor()
+            
+            return payload.exp <= fecha_servidor.value;
+        } catch (error) {
+            console.error('Error decoding token or checking expiration:', error);
+            return true;
+        }
     }
 
     const refreshAccessToken = async () => {
@@ -60,12 +87,14 @@ export const useSecurityStore = defineStore('security', () => {
                 },
             });
     
-            await saveToken(res.data.access_token);
-            await localforage.setItem('refresh_token', res.data.refresh_token); // Guarda el nuevo refresh token
+            await saveToken(res.data.access_token, res.data.refresh_token);
+            return res.status;
         } catch (error) {
             console.error('Error al refrescar el token:', error);
             clearToken(); // Limpia el estado si falla el refresco
             router.push('/login'); // Redirige al login
+
+            return error.status;
         }
     };
     
@@ -85,7 +114,7 @@ export const useSecurityStore = defineStore('security', () => {
                 }
             });
             
-            await saveToken(res.data.access_token);
+            await saveToken(res.data.access_token, res.data.refresh_token);
             return res.status;
         } catch (error) {
             return error.status;
@@ -94,13 +123,13 @@ export const useSecurityStore = defineStore('security', () => {
 
     return {
         accessToken,
+        obj_session_user,
         saveToken,
         getToken,
         clearToken,
-        isAuthenticated,
         isTokenExpired,
         refreshAccessToken,
-        postLogin
+        postLogin,
     }
   
 })

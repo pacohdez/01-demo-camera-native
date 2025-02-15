@@ -4,8 +4,8 @@ import { ref, defineProps, computed, onMounted } from 'vue'
 import { useGeneralStore } from '../boot/EvidenciasEquipos/general.js'
 
 const useGeneral = useGeneralStore()
-const { getConsultaOrdenes } = useGeneral
-const { ordenes } = storeToRefs(useGeneral)
+const { getConsultaAniosOrdenes, getConsultaOrdenesAnio } = useGeneral
+const { anio_edited, anios_ordenes, ordenes } = storeToRefs(useGeneral)
 
 const props = defineProps({
     _viewDialogOrden: Boolean,
@@ -26,14 +26,16 @@ const localDialog = computed({
     }
 })
 
-onMounted(() => {
-    getConsultaOrdenes()
+onMounted(async () => {
+    await getConsultaAniosOrdenes()
+    getConsultaOrdenesAnio(anio_edited.value)
 })
 
 const columns = [
     { name: 'actions', label: '', align: 'center', field: 'actions', sortable: false },
     { name: 'numero_orden', label: 'ORDEN', align: 'center', field: 'numero_orden', sortable: true },
-    { name: 'descripcion', label: 'DESCRIPCIÓN', align: 'center', field: 'descripcion', sortable: true }
+    { name: 'cliente', label: 'CLIENTE', align: 'center', field: 'cliente', sortable: false },
+    { name: 'descripcion', label: 'DESCRIPCIÓN', align: 'center', field: 'descripcion', sortable: false }
 ]
 
 const separator =  'horizontal'
@@ -54,8 +56,18 @@ const ordenSeleccionada = (orden) => {
         v-model="localDialog"
     >
         <q-card style="width: 900px; max-width: 80vw;">
-            <q-card-section class="text-white" style="background-color: #3B3F51;">
+            <q-card-section class=" row text-white justify-between" style="background-color: #3B3F51;">
                 <div class="text-h6">Catálogo ordenes</div>
+                <q-select
+                    class="col-6"
+                    v-model="anio_edited"
+                    label="Selecciona el año"
+                    filled
+                    dense
+                    bg-color="white"
+                    :options="anios_ordenes"
+                    @update:model-value="getConsultaOrdenesAnio(anio_edited)"
+                />
             </q-card-section>
 
             <q-card-section class="q-pt-none">
@@ -79,6 +91,12 @@ const ordenSeleccionada = (orden) => {
                                     <q-icon name="search" />
                                 </template>
                             </q-input>
+                        </template>
+                         <!-- Personalización de la celda de la columna DESCRIPCIÓN -->
+                        <template v-slot:body-cell-descripcion="props">
+                            <q-td :props="props" class="text-justify" style="width: 10px;">
+                                {{ props.row.descripcion }}
+                            </q-td>
                         </template>
                         <template v-slot:body-cell-actions="props">
                             <q-td :props="props" style="width: 100px;">

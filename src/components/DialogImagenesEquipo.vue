@@ -1,5 +1,10 @@
 <script setup>
-import { ref, defineProps, computed, onMounted } from 'vue'
+import { ref, defineProps, computed, watch } from 'vue'
+import { storeToRefs } from 'pinia'
+import { useComponentesEquipoStore } from '../stores/EvidenciasEquipos/componentesEquipo.js'
+
+const useComponentesEquipo = useComponentesEquipoStore()
+const { listEvidenciasPorOrdenPieza } = storeToRefs(useComponentesEquipo)
 
 const props = defineProps({
     _viewDialogImagenesEquipo: Boolean,
@@ -20,11 +25,17 @@ const localDialog = computed({
     }
 })
 const slide = ref(0)
-
-onMounted(() => {
-
+/* const onSlideChange = (newSlide) => {
+    slide.value = newSlide;
+    loadImage(newSlide); // Cargar la imagen actual
+    loadImage(newSlide + 1); // Precargar la siguiente imagen
+    console.log(newSlide);
+} */
+watch(() => props._viewDialogImagenesEquipo, async (newValue, oldValue) => {
+    if(newValue) {
+        slide.value = 0
+    }
 })
-
 </script>
 
 <template>
@@ -33,7 +44,7 @@ onMounted(() => {
     >
         <q-card>
             <q-card-section class="text-white" style="background-color: #3B3F51;">
-                <div class="text-h6">Evidencias del equipo: {{ _componenteSeleccionado.componente }}</div>
+                <div class="text-h6">Evidencias del equipo: {{ _componenteSeleccionado.descripcion }}</div>
             </q-card-section>
 
             <q-card-section class="q-pa-none">
@@ -45,11 +56,11 @@ onMounted(() => {
                         arrows
                         infinite
                         thumbnails
-                    >
+                    ><!-- @transition="onSlideChange" -->
                         <q-carousel-slide
-                            v-for="(image, index) in _componenteSeleccionado.imagenes"
+                            v-for="(image, index) in listEvidenciasPorOrdenPieza"
                             :name="index" 
-                            :img-src="image"
+                            :img-src="'data:'+image.documento.tipo_contenido+';base64,'+image.documento.base64"
                             :key="index"
                         />
                     </q-carousel>

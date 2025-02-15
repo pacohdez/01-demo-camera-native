@@ -1,13 +1,17 @@
 <script setup>
 import { ref, onMounted, onUnmounted } from 'vue'
 import { storeToRefs } from 'pinia';
+import { useRouter } from 'vue-router'
 import { Camera, CameraResultType, CameraSource } from '@capacitor/camera'
 import { Capacitor } from '@capacitor/core'
 import { useGeneralStore } from '../boot/EvidenciasEquipos/general.js'
 import { useEvidenciaFotograficaEquipoStore } from '../stores/EvidenciasEquipos/evidenciaFotograficaEquipo.js'
 import { useComponentesEquipoStore } from '../stores/EvidenciasEquipos/componentesEquipo.js'
+import { useCatalogoTiposEvidenciasStore } from 'src/boot/EvidenciasEquipos/catalogoTiposEvidenciasEquipos.js'
 import { useSecurityStore } from 'src/stores/EvidenciasEquipos/security.js'
-import { useRouter } from 'vue-router'
+import { useGetConvertDataUrlToFile } from 'src/composables/getConvertToFile.js'
+import { useGetConvertUriToBase64 } from 'src/composables/getConvertUriToBase64.js'
+import { useEvidenciasComponentesStore } from 'src/boot/EvidenciasEquipos/evidenciasComponentes.js'
 import CapturaEvidenciasEquipo from 'src/components/CapturaEvidenciasEquipo.vue'
 import ConsultaEvidenciasEquipo from 'src/components/ConsultaEvidenciasEquipo.vue'
 import Swal from 'sweetalert2'
@@ -21,31 +25,109 @@ const { cleanImagesSource } = useEvidenciaFotograficaEquipo
 const { imagesSource } = storeToRefs(useEvidenciaFotograficaEquipo)
 
 const useComponentesEquipo = useComponentesEquipoStore()
-const { cleanComponenteSeleccionado, addListadoComponente } = useComponentesEquipo
+const { cleanComponenteSeleccionado, addListadoComponente, getCatalogoPiezas } = useComponentesEquipo
 const { componenteSeleccionado } = storeToRefs(useComponentesEquipo)
 
+const useCatalogoTiposEvidencias = useCatalogoTiposEvidenciasStore()
+const { getCatalogoTiposEvidencias, cleanTiposEvidencias } = useCatalogoTiposEvidencias
+const { tipo_seleccionado } = storeToRefs(useCatalogoTiposEvidencias)
+
 const useSecurity = useSecurityStore();
-const { clearToken, isTokenExpired } = useSecurity
+const { clearToken, isTokenExpired, refreshAccessToken } = useSecurity
+const { obj_session_user } = storeToRefs(useSecurity)
+
+const useEvidenciasComponentes = useEvidenciasComponentesStore()
+const { postEvidenciasComponentes } = useEvidenciasComponentes
+
+const useConvertDataUrlToFile = useGetConvertDataUrlToFile()
+const { dataUrlToFile } = useConvertDataUrlToFile
+
+const useConvertUriToBase64 = useGetConvertUriToBase64()
+const { uriToBase64 } = useConvertUriToBase64
+
 const router = useRouter()
 
+const isMounted = ref(false)
+const obj_evidencias_save = ref({})
+const disableBtnGuardar = ref(false)
+
 const checkSession = async () => {
-  console.log('Verificando sesión...');
-  console.log('Token expirado:', await isTokenExpired());
-  
-  if (await isTokenExpired()) {
-    console.log('Token expirado. Redirigiendo al login...');
-    clearToken(); // Limpia cualquier dato almacenado del usuario
-    router.push('/login'); // Redirige al login
+  if(isMounted.value) {
+    if (await isTokenExpired()) {
+      clearToken(); // Limpia cualquier dato almacenado del usuario
+      router.push('/login'); // Redirige al login
+    }
   }
 }
 
-onMounted(() => {
-  // Verifica la sesión cada 60 segundos
-  const interval = setInterval(checkSession, 60000);
+const handleMouseMove = () => {
+  refreshAccessToken().then((status) => {
+    /* if (status != 200)
+      console.log('Error al refrescar token');
+    console.log('Token refrescado correctamente'); */
+  });
+};
 
-  // Limpia el intervalo cuando se desmonta el componente
-  onUnmounted(() => clearInterval(interval));
+const handleKeyDown = () => {
+  refreshAccessToken().then((status) => {
+    /* if (status != 200)
+      console.log('Error al refrescar token');
+    console.log('Token refrescado correctamente'); */
+  });
+};
+
+const handleScroll = () => {
+  refreshAccessToken().then((status) => {
+    /* if (status != 200)
+      console.log('Error al refrescar token');
+    console.log('Token refrescado correctamente'); */
+  });
+};
+
+const handleClick = () => {
+  refreshAccessToken().then((status) => {
+    /* if (status != 200)
+      console.log('Error al refrescar token');
+    console.log('Token refrescado correctamente'); */
+  });
+};
+
+const listenersActivity = () => {
+  window.addEventListener('mousemove', handleMouseMove);
+  window.addEventListener('keydown', handleKeyDown);
+  window.addEventListener('scroll', handleScroll);
+  window.addEventListener('click', handleClick);
+}
+
+const stopListenersActivity = () => {
+  // Eliminar listeners al desmontar el componente
+  window.removeEventListener('mousemove', handleMouseMove);
+  window.removeEventListener('keydown', handleKeyDown);
+  window.removeEventListener('scroll', handleScroll);
+  window.removeEventListener('click', handleClick);
+  //console.log('Eventos eliminados correctamente');
+}
+
+onMounted(() => {
+  isMounted.value = true
+  getCatalogoTiposEvidencias()
+  getCatalogoPiezas()
+  // Verifica la sesión cada 1 segundo
+  setInterval(checkSession, 1000);
+  listenersActivity(); // Inicia el monitoreo de actividad del usuario
 })
+
+onUnmounted(() => {
+  isMounted.value = false
+  stopListenersActivity();
+})
+
+const cleanPantalla = () => {
+  cleanOrden()
+  cleanComponenteSeleccionado()
+  cleanImagesSource()
+  cleanTiposEvidencias()
+}
 
 async function takePicture() {
   // Verificar plataforma
@@ -70,8 +152,7 @@ async function takePicture() {
 const tab = ref('Captura')
 const guardar = async () => {
   Swal.fire({
-    
-    title: `¿Seguro de guardar las evidencias del equipo: ${componenteSeleccionado.value}?`,
+    title: `¿Seguro de guardar las evidencias del equipo: ${componenteSeleccionado.value.descripcion}?`,
     icon: "warning",
     showCancelButton: true,
     confirmButtonColor: "#3085d6",
@@ -80,18 +161,44 @@ const guardar = async () => {
     confirmButtonText: "Aceptar"
   }).then(async result => {
     if (result.value) {
-      Swal.fire("Información guardada exitosamente!", "", "success").then(() => {
-        let obj_listado = {
-          id: orden.value.id,
-          numero_orden: orden.value.numero_orden,
-          componente: componenteSeleccionado.value,
-          imagenes: imagesSource.value
+      disableBtnGuardar.value = true
+      var formData = new FormData();
+      var json_archivos = [];
+
+      for(let i=0; i < imagesSource.value.length; i++) {
+        obj_evidencias_save.value = {}
+        let obj_documento = {}
+
+        let base64 = await uriToBase64(imagesSource.value[i])
+        let archivo = dataUrlToFile(base64, 'jpeg')
+        //obj_evidencias_save.value.tipo_contenido = archivo.type
+        obj_evidencias_save.value.origen_evidencias_componentes_catalogo_piezas_id = componenteSeleccionado.value.id
+        obj_evidencias_save.value.origen_personal_id = obj_session_user.value.id
+        obj_documento.origen_id = orden.value.id
+        obj_evidencias_save.value.documento = obj_documento;
+
+        formData.append('uploadfile', archivo)
+        json_archivos.push(obj_evidencias_save.value)
+      }
+                            
+      var json = (JSON.stringify(json_archivos))
+      formData.append("archivos", json)
+      formData.append("noOrden", orden.value.numero_orden)
+      formData.append("tipo_evidencia_id", tipo_seleccionado.value.id)
+      formData.append("tipo_evidencia", tipo_seleccionado.value.clave)
+      formData.append("pieza", componenteSeleccionado.value.descripcion)
+      formData.append("noEmpleado", obj_session_user.value.employee_number)
+
+      await postEvidenciasComponentes(formData).then((status) => {
+        if(status === 201) {
+          Swal.fire("Información guardada exitosamente!", "", "success").then(() => {
+            disableBtnGuardar.value = false
+            cleanPantalla()
+          })
+        } else {
+          Swal.fire("Error al guardar la información!", "", "error")
+          disableBtnGuardar.value = false
         }
-        console.log(JSON.stringify(obj_listado))
-        addListadoComponente(obj_listado)
-        cleanOrden()
-        cleanComponenteSeleccionado()
-        cleanImagesSource()
       })
     }
   });
@@ -105,23 +212,33 @@ const guardar = async () => {
         <q-toolbar-title>
           Evidencias Equipos
         </q-toolbar-title>
-        <q-tabs v-model="tab" shrink stretch>
-          <q-tab name="Captura" icon="add_circle" @click="cleanOrden(); " />
-          <q-tab name="Consulta" icon="search" @click="cleanOrden(); " />
-        </q-tabs>
-        <q-btn
+
+        <q-btn-dropdown 
+          class="q-pa-none"
+          color="white" 
+          size="sm" 
+          :label="obj_session_user.employee_number + ' - ' + obj_session_user.name" 
+          dropdown-icon="keyboard_arrow_down" 
           flat
-          round
-          color="white"
-          icon="logout"
-          @click="clearToken(); router.push('/login')"
-          class="absolute"
-          style="right: 0; top: 0; transform: translateY(50%);"
-        />
+        >
+          <q-list>
+            <q-item clickable v-close-popup @click="clearToken(); router.push('/login')">
+              <q-item-section>
+                <q-item-label>Cerrar sesión</q-item-label>
+              </q-item-section>
+            </q-item>
+          </q-list>
+        </q-btn-dropdown>
       </q-toolbar>
     </q-header>
 
     <q-page-container>
+
+      <q-tabs v-model="tab" shrink stretch dense class="text-blue-grey-7" inline-label>
+        <q-tab name="Captura" label="Captura" icon="add_circle" @click="cleanPantalla(); " />
+        <q-tab name="Consulta" label="Cosultar" icon="search" @click="cleanPantalla(); " />
+      </q-tabs>
+
       <q-tab-panels v-model="tab" animated>
         <q-tab-panel name="Captura" class="q-pa-none">
           <captura-evidencias-equipo />
@@ -143,13 +260,14 @@ const guardar = async () => {
           @click="takePicture()"
         />
         <q-btn 
-          v-if="orden.numero_orden != '' && imagesSource.length > 0 && componenteSeleccionado != null"
+          v-if="orden.numero_orden != '' && imagesSource.length > 0 && componenteSeleccionado != null && tipo_seleccionado != null"
           round 
           color="secondary" 
           icon="save"
           class="absolute"
           size="lg"
           style="top: 0; right: 25px; transform: translateY(-50%); z-index: 1; "
+          :disable="disableBtnGuardar"
           @click="guardar()"
         />
       </q-toolbar>

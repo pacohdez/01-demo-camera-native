@@ -1,5 +1,5 @@
 <script setup>
-import { ref } from 'vue'
+import { ref, watch } from 'vue'
 import OrdenSelection from 'src/components/OrdenSelection.vue'
 import { useGeneralStore } from '../boot/EvidenciasEquipos/general.js'
 import { storeToRefs } from 'pinia'
@@ -10,29 +10,46 @@ const useGeneral = useGeneralStore()
 const { orden } = storeToRefs(useGeneral)
 
 const useComponentesEquipo = useComponentesEquipoStore()
-const { listComponentes } = storeToRefs(useComponentesEquipo)
+const { getConsultarPiezasConEvidenciasOrden, getConsultarEvidenciasPorOrdenPieza } = useComponentesEquipo
+const { listPiezasConEvidenciasOrden } = storeToRefs(useComponentesEquipo)
 
+const visible = ref(false)
 const _viewDialogImagenesEquipo = ref(false)
 const _componenteSeleccionado = ref(null)
-const showEvidenciasEquipo = (componenteSelec) => {
-    console.log('Mostrar evidencias del equipo')
-    _viewDialogImagenesEquipo.value = true
-    _componenteSeleccionado.value = componenteSelec
+const showEvidenciasEquipo = async (componenteSelec) => {
+    visible.value = true
+    await getConsultarEvidenciasPorOrdenPieza(orden.value.id, componenteSelec.id).then((response) => {
+        if(response.status === 200) {
+            _viewDialogImagenesEquipo.value = true
+            _componenteSeleccionado.value = componenteSelec
+        }
+    })
+    visible.value = false
 }
 const closeDialogImagenesEquipo = () => {
     _viewDialogImagenesEquipo.value = false
 }
+// Vigilar cambios del objeto orden de la tienda
+watch(() => orden.value.id, async (newValueId, oldValueId) => {
+    if(newValueId > 0) {
+        visible.value = true
+        await getConsultarPiezasConEvidenciasOrden(newValueId)
+        visible.value = false
+    }
+})
+
 </script>
 
 <template>
     <div class="q-mt-sm">
         <orden-selection />
     </div>
+    <!-- <h6>{{ listDetalleEvidenciasOrdenAgrupadaComponente }}</h6> -->
     <div class="q-mt-sm" v-if="orden.numero_orden != ''">
         <q-list bordered>
-            <div v-for="componente in listComponentes.filter((componente) => (componente.id === orden.id))" :key="componente.id">
+            <div v-for="componente in listPiezasConEvidenciasOrden" :key="componente.id">
                 <q-item clickable v-ripple @click="showEvidenciasEquipo(componente)">
-                    <q-item-section>{{ componente.componente }}</q-item-section>
+                    <q-item-section>{{ componente.descripcion }}</q-item-section>
                     <q-item-section avatar>
                     <q-icon color="primary" name="photo_camera" />
                     </q-item-section>
@@ -46,6 +63,14 @@ const closeDialogImagenesEquipo = () => {
             :_viewDialogImagenesEquipo = "_viewDialogImagenesEquipo"
             :_componenteSeleccionado = "_componenteSeleccionado"
             @closeDialogImagenesEquipo = "closeDialogImagenesEquipo"
+        />
+    </div>
+    <div>
+        <q-inner-loading
+            :showing="visible"
+            label="Porfavor espere..."
+            label-class="text-teal"
+            label-style="font-size: 1.1em"
         />
     </div>
 </template>

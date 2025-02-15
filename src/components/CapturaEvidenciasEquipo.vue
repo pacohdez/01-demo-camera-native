@@ -3,6 +3,7 @@ import { storeToRefs } from 'pinia';
 import { ref } from 'vue'
 import OrdenSelection from '../components/OrdenSelection.vue'
 import EquipoSelection from 'src/components/EquipoSelection.vue'
+import TipoEvidenciaSelection from 'src/components/TipoEvidenciaSelection.vue';
 import { useEvidenciaFotograficaEquipoStore } from '../stores/EvidenciasEquipos/evidenciaFotograficaEquipo.js'
 
 const useEvidenciaFotograficaEquipo = useEvidenciaFotograficaEquipoStore()
@@ -28,6 +29,7 @@ const deletePhoto = () => {
 
     <div class="q-mt-sm">
         <equipo-selection />
+        <tipo-evidencia-selection class="q-mt-xs" />
     </div>
       
     <div class="col q-mt-xs">
@@ -38,7 +40,7 @@ const deletePhoto = () => {
             arrows
             infinite
             thumbnails
-            height="495px"
+            height="455px"
         >
             <q-carousel-slide
                 v-for="(image, index) in imagesSource"
