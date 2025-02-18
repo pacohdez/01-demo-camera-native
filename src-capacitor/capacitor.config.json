@@ -1,11 +1,14 @@
 {
   "appId": "com.cameranative.app",
-  "appName": "App DemoNative",
+  "appName": "TurboERP-DE",
   "webDir": "www",
   "plugins": {
     "Camera": {
       "saveToGallery": true,
       "allowEditing": false
     }
+  },
+  "server": {
+    "androidScheme": "http"
   }
 }

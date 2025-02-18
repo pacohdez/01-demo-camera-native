@@ -1,7 +1,7 @@
 <?xml version='1.0' encoding='utf-8'?>
 <resources>
-    <string name="app_name">App DemoNative</string>
-    <string name="title_activity_main">App DemoNative</string>
+    <string name="app_name">TurboERP-DE</string>
+    <string name="title_activity_main">TurboERP-DE</string>
     <string name="package_name">com.cameranative.app</string>
     <string name="custom_url_scheme">com.cameranative.app</string>
 </resources>

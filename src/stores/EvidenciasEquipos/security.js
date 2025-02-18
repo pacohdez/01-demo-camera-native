@@ -115,9 +115,9 @@ export const useSecurityStore = defineStore('security', () => {
             });
             
             await saveToken(res.data.access_token, res.data.refresh_token);
-            return res.status;
+            return res;
         } catch (error) {
-            return error.status;
+            return error;
         }
     }
 

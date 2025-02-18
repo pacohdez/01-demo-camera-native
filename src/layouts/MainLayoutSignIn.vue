@@ -2,9 +2,13 @@
 import { ref } from 'vue'
 import { useSecurityStore } from 'src/stores/EvidenciasEquipos/security.js'
 import { useRouter } from 'vue-router'
+import { useGetNotify } from 'src/composables/getNotify.js'
 
 const useSecurity = useSecurityStore()
 const { postLogin } = useSecurity
+
+const useNotify = useGetNotify()
+const { notify } = useNotify
 
 const router = useRouter(); // Hook para acceder al router
 
@@ -12,14 +16,16 @@ const username = ref('')
 const password = ref('')
 
 const login = async() => {
-    await postLogin(username.value, password.value).then(async(status) => {
-        if(status === 200) {
+    await postLogin(username.value, password.value).then(async(response) => {
+        if(response.status === 200) {
             console.log('Login exitoso');
             await router.push('/').then(() => {
                 console.log('Redirección completada.');
             }).catch((err) => {
                 console.error('Error al redirigir:', err);
             });
+        } else {
+            notify('¡Usuario y/ó contraseña incorrecta!', 'negative', 'center', 'error')
         }
     })
 }
@@ -37,7 +43,7 @@ const login = async() => {
                         <!-- <q-avatar size="80px" class="bg-primary text-white q-mb-md">
                             <q-icon name="login" size="40px" />
                         </q-avatar> -->
-                        <q-img src="src/assets/logo3.png" />
+                        <q-img src="/logo3.png" />
                         <br /><br />
                         <div class="text-h7 text-black"><strong>Inicia Sesión</strong></div>
                         <div class="text-subtitle2"></div>

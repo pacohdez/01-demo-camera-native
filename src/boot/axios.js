@@ -11,6 +11,7 @@ import GlobalEq from 'src/configuration/globalEq.js'
 const api = axios.create({ baseURL: GlobalEq.baseUrlAxios() })
 const apiKeycloak = axios.create({ baseURL: GlobalEq.baseUrlKeycloak() })
 
+
 export default defineBoot(({ app }) => {
   // for use inside Vue files (Options API) through this.$axios and this.$api
 
