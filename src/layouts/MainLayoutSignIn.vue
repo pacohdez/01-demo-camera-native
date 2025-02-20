@@ -24,6 +24,8 @@ const login = async() => {
             }).catch((err) => {
                 console.error('Error al redirigir:', err);
             });
+        } else if(response.status === 0) {
+            router.push('/access-denied')
         } else {
             notify('¡Usuario y/ó contraseña incorrecta!', 'negative', 'center', 'error')
         }

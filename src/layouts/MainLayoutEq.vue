@@ -33,7 +33,7 @@ const { getCatalogoTiposEvidencias, cleanTiposEvidencias } = useCatalogoTiposEvi
 const { tipo_seleccionado } = storeToRefs(useCatalogoTiposEvidencias)
 
 const useSecurity = useSecurityStore();
-const { clearToken, isTokenExpired, refreshAccessToken } = useSecurity
+const { cleanToken, isTokenExpired, refreshAccessToken } = useSecurity
 const { obj_session_user } = storeToRefs(useSecurity)
 
 const useEvidenciasComponentes = useEvidenciasComponentesStore()
@@ -54,7 +54,7 @@ const disableBtnGuardar = ref(false)
 const checkSession = async () => {
   if(isMounted.value) {
     if (await isTokenExpired()) {
-      clearToken(); // Limpia cualquier dato almacenado del usuario
+      cleanToken(); // Limpia cualquier dato almacenado del usuario
       router.push('/login'); // Redirige al login
     }
   }
@@ -222,7 +222,7 @@ const guardar = async () => {
           flat
         >
           <q-list>
-            <q-item clickable v-close-popup @click="clearToken(); router.push('/login')">
+            <q-item clickable v-close-popup @click="cleanToken(); router.push('/login')">
               <q-item-section>
                 <q-item-label>Cerrar sesión</q-item-label>
               </q-item-section>

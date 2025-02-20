@@ -4,9 +4,13 @@ import { storeToRefs } from 'pinia';
 import { apiKeycloak } from 'src/boot/axios';
 import { useGeneralStore } from 'src/boot/EvidenciasEquipos/general.js'
 import { useGetPayloadToken } from 'src/composables/getPayloadToken.js'
-import localforage from 'localforage'
+import { useGetDecodificarAccessToken } from 'src/composables/getDecodificarAccessToken.js'
+import { useGetBuscarValEnArray } from 'src/composables/getBuscarValEnArray.js'
+import { useRouter } from 'vue-router'
 
 export const useSecurityStore = defineStore('security', () => {
+
+    const router = useRouter(); // Hook para acceder al router
 
     const useGeneral = useGeneralStore()
     const { getFechaServidor, getUsuarioPorNumero } = useGeneral
@@ -15,8 +19,16 @@ export const useSecurityStore = defineStore('security', () => {
     const usePayloadToken = useGetPayloadToken()
     const { payloadToken } = usePayloadToken
 
+    const useDecodificarAccessToken = useGetDecodificarAccessToken()
+    const { decodificarAccessToken } = useDecodificarAccessToken
+
+    const useBuscarValEnArray = useGetBuscarValEnArray()
+    const { existeValEnArray } = useBuscarValEnArray
+
     // Estado reactivo para el access_token
     const accessToken = ref(null);
+    const refreshToken = ref(null)
+
     const obj_session_user = ref({
         "id": '',
         "name": '',
@@ -26,8 +38,7 @@ export const useSecurityStore = defineStore('security', () => {
     // Función para guardar el token en el almacenamiento seguro
     const saveToken = async(token, refresh_token) => {
         accessToken.value = token; // Actualiza el estado
-        await localforage.setItem('access_token', token);
-        await localforage.setItem('refresh_token', refresh_token);
+        refreshToken.value = refresh_token
 
         let payload = payloadToken(token)
         obj_session_user.value.name = payload.name
@@ -38,17 +49,13 @@ export const useSecurityStore = defineStore('security', () => {
 
     // Función para obtener el token desde el almacenamiento seguro
     const getToken = async() => {
-        const valueAT = await localforage.getItem('access_token');
-        accessToken.value = valueAT; // Actualiza el estado
-
-        return valueAT;
+        return accessToken.value;
     }
 
     // Función para eliminar el token (logout)
-    const clearToken = async() => {
-        accessToken.value = null; // Limpia el estado
-        await localforage.removeItem('access_token');
-        await localforage.removeItem('refresh_token');
+    const cleanToken = async() => {
+        accessToken.value = null
+        refreshToken.value = null
 
         Object.assign(obj_session_user.value, {"id": '', "name": '', "employee_number": ''})
     }
@@ -75,12 +82,11 @@ export const useSecurityStore = defineStore('security', () => {
 
     const refreshAccessToken = async () => {
         try {
-            const refreshToken = await localforage.getItem('refresh_token'); // Recupera el refresh token
             const res = await apiKeycloak.post('/auth/realms/turboerp/protocol/openid-connect/token', new URLSearchParams({
                 grant_type: 'refresh_token',
                 client_id: 'frontend',
                 client_secret: '365fbe12-ec87-41a6-8ba9-eebdab456a49',
-                refresh_token: refreshToken,
+                refresh_token: refreshToken.value,
             }), {
                 headers: {
                     'Content-Type': 'application/x-www-form-urlencoded',
@@ -91,7 +97,7 @@ export const useSecurityStore = defineStore('security', () => {
             return res.status;
         } catch (error) {
             console.error('Error al refrescar el token:', error);
-            clearToken(); // Limpia el estado si falla el refresco
+            cleanToken(); // Limpia el estado si falla el refresco
             router.push('/login'); // Redirige al login
 
             return error.status;
@@ -113,9 +119,16 @@ export const useSecurityStore = defineStore('security', () => {
                     'Content-Type': 'application/x-www-form-urlencoded'
                 }
             });
-            
-            await saveToken(res.data.access_token, res.data.refresh_token);
-            return res;
+
+            // Decodificar el token para extraer roles
+            let dataAccessToken = decodificarAccessToken(res.data.access_token)
+            if(existeValEnArray(dataAccessToken.realm_access.roles, 'ro_dg_capturar_evidencias_fotograficas_piezas')) {
+                await saveToken(res.data.access_token, res.data.refresh_token);
+                return res;
+            } else {
+                cleanToken();
+                return {status: 0}
+            }
         } catch (error) {
             return error;
         }
@@ -126,7 +139,7 @@ export const useSecurityStore = defineStore('security', () => {
         obj_session_user,
         saveToken,
         getToken,
-        clearToken,
+        cleanToken,
         isTokenExpired,
         refreshAccessToken,
         postLogin,

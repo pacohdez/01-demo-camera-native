@@ -8,6 +8,10 @@ const routes = [
     path: '/login',
     component: () => import('src/layouts/MainLayoutSignIn.vue'),
   },
+  {
+    path: '/access-denied',
+    component: () => import('pages/AccessDenied.vue'),
+  },
 
   // Always leave this as last one,
   // but you can also remove it

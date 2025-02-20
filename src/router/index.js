@@ -33,10 +33,10 @@ export default defineRouter(function (/* { store, ssrContext } */) {
   Router.beforeEach(async (to, from, next) => {
     const useSecurity = useSecurityStore(); // Obtén la tienda correctamente aquí, ya que antes aún no esta cargado pinia
     const { getToken, isTokenExpired  } = useSecurity
-    const token = await getToken(); // Asegúrate de manejar el token como asíncrono si es necesario
-    console.log('token...', isTokenExpired());
     
-    if (to.meta.requiresAuth && (!token /* || await isTokenExpired() */)) {
+    const token = await getToken(); // Asegúrate de manejar el token como asíncrono si es necesario
+    
+    if (to.meta.requiresAuth && (!token || await isTokenExpired())) {
       next('/login'); // Redirige al login si no hay token
     } else {
       next(); // Permite el acceso
