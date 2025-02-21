@@ -51,15 +51,15 @@ const deletePhoto = () => {
 
             <template v-slot:control>
                 <q-carousel-control
-                v-if="imagesSource.length > 0"
-                position="top-right"
-                :offset="[18, 18]"
+                    v-if="imagesSource.length > 0"
+                    position="top-right"
+                    :offset="[18, 18]"
                 >
-                <q-btn
-                    push round dense color="red"
-                    icon="delete"
-                    @click="deletePhoto()"
-                />
+                    <q-btn
+                        push round dense color="red"
+                        icon="delete"
+                        @click="deletePhoto()"
+                    />
                 </q-carousel-control>
             </template>
         </q-carousel>
